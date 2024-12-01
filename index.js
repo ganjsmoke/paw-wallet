@@ -50,6 +50,47 @@ async function loadUserAgents(filename) {
   return userAgents;
 }
 
+// Buy Heart Function
+async function buyHeart(queryId, userAgent) {
+  try {
+    const accountDetails = await fetchAccountDetails(queryId, userAgent);
+
+    if (accountDetails.player && accountDetails.player.hearts === 1) {
+      console.log(chalk.cyan("Heart balance is 1. Attempting to buy 1 heart..."));
+
+      const response = await axios.post(
+        "https://robot-cat-game-api.pawwallet.app/api/v1/player/buy-heart",
+        { quantity: 1 },
+        {
+          headers: {
+            Authorization: queryId,
+            "Content-Type": "application/json",
+            "User-Agent": userAgent,
+          },
+        }
+      );
+
+      if (response.data?.status === 200) {
+        console.log(chalk.green("Buy 1 heart success."));
+      } else {
+        console.log(chalk.yellow("Unexpected response while buying heart."));
+      }
+    } else {
+      console.log(
+        chalk.gray(
+          `Heart balance is not 1,Skipping buy heart.`
+        )
+      );
+    }
+  } catch (error) {
+    console.error(
+      chalk.red("Error buying heart:"),
+      error.response?.data || error.message
+    );
+  }
+}
+
+
 // Helper function to get a random user agent
 function getRandomUserAgent(userAgents) {
   const randomIndex = Math.floor(Math.random() * userAgents.length);
@@ -334,7 +375,9 @@ async function main() {
           console.log(chalk.yellow(`Balance: ${balance}`));
           console.log(chalk.yellow(`Mining Speed: ${miningSpeed}`));
         }
-
+		// Buy heart if needed
+		await buyHeart(queryId, userAgent);
+		
         await completeAllMissions(queryId, userAgent);
 
         const lastSessionEndTime = accountDetails.player?.lastSessionEndTime
