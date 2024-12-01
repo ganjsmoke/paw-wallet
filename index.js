@@ -4,7 +4,7 @@ const readline = require("readline");
 const chalk = require("chalk");
 
 const API_BASE_URL = "https://robot-cat-game-api.pawwallet.app/api/v1";
-const DELAY_TIME_MS = 105 * 60 * 1000; // 1 hour 45 minutes in milliseconds
+const DELAY_TIME_MS = 120 * 60 * 1000; // 1 hour 45 minutes in milliseconds
 const DELAY_ACCOUNT = 3000; // 1 hour 45 minutes in milliseconds
 const REFERRER_ID = "259015677";
 
