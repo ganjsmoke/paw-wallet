@@ -271,24 +271,72 @@ async function claimMining(queryId, userAgent) {
   }
 }
 
-// Upgrade Function
-async function upgrade(queryId, walletAddress, userAgent) {
+
+async function getGameConfig(queryId, userAgent) {
   try {
-    await axios.post(
-      `${API_BASE_URL}/player/upgrade`,
-      { walletAddress },
-      {
-        headers: {
-          Authorization: queryId,
-          "User-Agent": userAgent,
-        },
-      }
-    );
-    console.log(chalk.green("Upgrade Successful."));
+    const response = await axios.get(`${API_BASE_URL}/game`, {
+      headers: {
+        Authorization: queryId,
+        "User-Agent": userAgent,
+      },
+    });
+
+    if (response.data && response.data.success) {
+      console.log(chalk.green("Game config fetched successfully."));
+      return response.data.data.gameConfig;
+    } else {
+      console.error(
+        chalk.red("Failed to fetch game config: Unexpected response."),
+        response.data
+      );
+      return null;
+    }
   } catch (error) {
-    console.error(chalk.red("Upgrade Error:"), error.response?.data || error.message);
+    console.error(
+      chalk.red("Error fetching game config:"),
+      error.response?.data || error.message
+    );
+    return null;
   }
 }
+
+
+async function conditionalUpgrade(queryId, userAgent, playerData, gameConfig) {
+  const { level, balance } = playerData;
+  const { goldUpgradeCosts, solUpgradeCosts } = gameConfig;
+
+  const goldCost = goldUpgradeCosts[level];
+  const solCost = solUpgradeCosts[level];
+
+  console.log(chalk.cyan(`Attempting upgrade for level ${level}...`));
+  console.log(chalk.cyan(`Gold required: ${goldCost}, SOL required: ${solCost}`));
+  console.log(chalk.cyan(`Current balance: ${balance}`));
+
+  if (balance >= goldCost && solCost === 0) {
+    try {
+      await axios.post(
+        `${API_BASE_URL}/player/upgrade`,
+        { walletAddress: playerData.walletAddress },
+        {
+          headers: {
+            Authorization: queryId,
+            "User-Agent": userAgent,
+          },
+        }
+      );
+      console.log(chalk.green(`Upgrade successful to level ${level + 1}!`));
+    } catch (error) {
+      console.error(chalk.red("Upgrade failed:"), error.response?.data || error.message);
+    }
+  } else {
+    console.log(
+      chalk.yellow(
+        `Upgrade not possible. Either insufficient balance or SOL requirement not met.`
+      )
+    );
+  }
+}
+
 
 // Complete All Missions Function
 async function completeAllMissions(queryId, userAgent) {
@@ -403,7 +451,16 @@ async function main() {
 
         if (!upgradeCompleteTime || now >= upgradeCompleteTime) {
           console.log(chalk.cyan("Condition Met: Performing upgrade..."));
-          await upgrade(queryId, walletAddress, userAgent);
+			// Di dalam main loop atau saat memproses akun
+			const gameConfig = await getGameConfig(queryId, userAgent);
+
+			if (gameConfig) {
+
+			  // Lanjutkan proses lainnya seperti upgrade
+			  await conditionalUpgrade(queryId, userAgent, accountDetails.player, gameConfig);
+			} else {
+			  console.error(chalk.red("Unable to proceed without game config."));
+			}
         } else {
           console.log(
             chalk.gray("Skipping Upgrade: Current time is less than upgrade complete time.")
